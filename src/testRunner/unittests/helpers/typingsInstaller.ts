@@ -91,16 +91,13 @@ function getTypesRegistryFileLocation(globalTypingsCacheLocation: string): strin
     return ts.combinePaths(ts.normalizeSlashes(globalTypingsCacheLocation), `node_modules/${typesRegistryPackageName}/index.json`);
 }
 
+export interface FileWithTypingPackageName extends File {
+    typings: string;
+}
 export type InstallActionThrowingError = string;
 export type InstallActionWithTypingFiles = [installedTypings: string[] | string, typingFiles: File[]];
-export type CustomInstallAction = (
-    installer: TestTypingsInstallerWorker,
-    requestId: number,
-    packageNames: string[],
-    cb: ts.server.typingsInstaller.RequestCompletedAction,
-) => void;
-
-export type InstallAction = InstallActionThrowingError | InstallActionWithTypingFiles | CustomInstallAction;
+export type InstallActionWithFilteredTypings = [typingFiles: FileWithTypingPackageName[]];
+export type InstallAction = InstallActionThrowingError | InstallActionWithTypingFiles | InstallActionWithFilteredTypings;
 export class TestTypingsInstallerWorker extends ts.server.typingsInstaller.TypingsInstaller {
     readonly typesRegistry: Map<string, ts.MapLike<string>>;
     protected projectService!: ts.server.ProjectService;
@@ -189,7 +186,7 @@ export class TestTypingsInstallerWorker extends ts.server.typingsInstaller.Typin
         else if (ts.isString(this.installAction)) {
             assert(false, this.installAction);
         }
-        else if (ts.isArray(this.installAction)) {
+        else if (this.installAction.length === 2) {
             this.executeInstallWithTypingFiles(
                 requestId,
                 packageNames,
@@ -199,7 +196,14 @@ export class TestTypingsInstallerWorker extends ts.server.typingsInstaller.Typin
             );
         }
         else {
-            this.installAction(this, requestId, packageNames, cb);
+            const typingFiles = this.installAction[0].filter(f => packageNames.includes(ts.server.typingsInstaller.typingsName(f.typings)));
+            this.executeInstallWithTypingFiles(
+                requestId,
+                packageNames,
+                typingFiles.map(f => f.typings),
+                typingFiles,
+                cb,
+            );
         }
     }
 

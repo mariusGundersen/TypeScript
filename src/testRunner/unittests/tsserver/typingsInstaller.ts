@@ -14,6 +14,7 @@ import {
 import {
     createTypesRegistry,
     customTypesMap,
+    FileWithTypingPackageName,
     loggerToTypingsInstallerLog,
     TestTypingsInstaller,
 } from "../helpers/typingsInstaller";
@@ -631,35 +632,35 @@ describe("unittests:: tsserver:: typingsInstaller:: General functionality", () =
             content: "",
         };
 
-        const commander = {
+        const commander: FileWithTypingPackageName = {
             path: "/a/data/node_modules/@types/commander/index.d.ts",
             content: "declare const commander: { x: number }",
-            typings: ts.server.typingsInstaller.typingsName("commander"),
+            typings: "commander",
         };
-        const jquery = {
+        const jquery: FileWithTypingPackageName = {
             path: "/a/data/node_modules/@types/jquery/index.d.ts",
             content: "declare const jquery: { x: number }",
-            typings: ts.server.typingsInstaller.typingsName("jquery"),
+            typings: "jquery",
         };
-        const lodash = {
+        const lodash: FileWithTypingPackageName = {
             path: "/a/data/node_modules/@types/lodash/index.d.ts",
             content: "declare const lodash: { x: number }",
-            typings: ts.server.typingsInstaller.typingsName("lodash"),
+            typings: "lodash",
         };
-        const cordova = {
+        const cordova: FileWithTypingPackageName = {
             path: "/a/data/node_modules/@types/cordova/index.d.ts",
             content: "declare const cordova: { x: number }",
-            typings: ts.server.typingsInstaller.typingsName("cordova"),
+            typings: "cordova",
         };
-        const grunt = {
+        const grunt: FileWithTypingPackageName = {
             path: "/a/data/node_modules/@types/grunt/index.d.ts",
             content: "declare const grunt: { x: number }",
-            typings: ts.server.typingsInstaller.typingsName("grunt"),
+            typings: "grunt",
         };
-        const gulp = {
+        const gulp: FileWithTypingPackageName = {
             path: "/a/data/node_modules/@types/gulp/index.d.ts",
             content: "declare const gulp: { x: number }",
-            typings: ts.server.typingsInstaller.typingsName("gulp"),
+            typings: "gulp",
         };
 
         const host = createServerHost([lodashJs, commanderJs, file3, customTypesMap]);
@@ -668,22 +669,7 @@ describe("unittests:: tsserver:: typingsInstaller:: General functionality", () =
             host,
             logger,
             {
-                installAction: (installer, requestId, packageNames, cb) => {
-                    let typingFiles: (File & { typings: string; })[] = [];
-                    if (packageNames.includes(ts.server.typingsInstaller.typingsName("commander"))) {
-                        typingFiles = [commander, jquery, lodash, cordova];
-                    }
-                    else {
-                        typingFiles = [grunt, gulp];
-                    }
-                    installer.executeInstallWithTypingFiles(
-                        requestId,
-                        packageNames,
-                        typingFiles.map(f => f.typings),
-                        typingFiles,
-                        cb,
-                    );
-                },
+                installAction: [[commander, jquery, lodash, cordova, grunt, gulp]],
                 throttleLimit: 1,
                 typesRegistry: ["commander", "jquery", "lodash", "cordova", "gulp", "grunt"],
             },
@@ -1217,12 +1203,12 @@ describe("unittests:: tsserver:: typingsInstaller:: General functionality", () =
             }),
         };
 
-        const jquery = {
+        const jquery: FileWithTypingPackageName = {
             path: "/a/data/node_modules/@types/jquery/index.d.ts",
             content: "declare const $: { x: number }",
             typings: "jquery",
         };
-        const commander = {
+        const commander: FileWithTypingPackageName = {
             path: "/a/data/node_modules/@types/commander/index.d.ts",
             content: "export let x: number",
             typings: "commander",
@@ -1233,22 +1219,7 @@ describe("unittests:: tsserver:: typingsInstaller:: General functionality", () =
             host,
             logger,
             {
-                installAction: (installer, requestId, packageNames, cb) => {
-                    let typingFiles: (File & { typings: string; })[] = [];
-                    if (packageNames.includes(ts.server.typingsInstaller.typingsName("commander"))) {
-                        typingFiles = [commander];
-                    }
-                    else {
-                        typingFiles = [jquery];
-                    }
-                    installer.executeInstallWithTypingFiles(
-                        requestId,
-                        packageNames,
-                        typingFiles.map(f => f.typings),
-                        typingFiles,
-                        cb,
-                    );
-                },
+                installAction: [[commander, jquery]],
                 typesRegistry: ["jquery", "commander"],
             },
         );
