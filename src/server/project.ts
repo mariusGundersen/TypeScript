@@ -146,6 +146,7 @@ import {
     ModuleImportResult,
     Msg,
     NormalizedPath,
+    nullTypingsInstaller,
     projectContainsInfoDirectly,
     ProjectOptions,
     ProjectReferenceProjectLoadKind,
@@ -315,6 +316,61 @@ const enabledTypeAcquisition: TypeAcquisition = {
     include: ts.emptyArray,
     exclude: ts.emptyArray,
 };
+interface TypingsCacheEntry {
+    readonly typeAcquisition: TypeAcquisition;
+    readonly compilerOptions: CompilerOptions;
+    readonly typings: SortedReadonlyArray<string>;
+    readonly unresolvedImports: SortedReadonlyArray<string> | undefined;
+    /* mainly useful for debugging */
+    poisoned: boolean;
+}
+
+function setIsEqualTo(arr1: string[] | undefined, arr2: string[] | undefined): boolean {
+    if (arr1 === arr2) {
+        return true;
+    }
+    if ((arr1 || emptyArray).length === 0 && (arr2 || emptyArray).length === 0) {
+        return true;
+    }
+    const set = new Map<string, boolean>();
+    let unique = 0;
+
+    for (const v of arr1!) {
+        if (set.get(v) !== true) {
+            set.set(v, true);
+            unique++;
+        }
+    }
+    for (const v of arr2!) {
+        const isSet = set.get(v);
+        if (isSet === undefined) {
+            return false;
+        }
+        if (isSet === true) {
+            set.set(v, false);
+            unique--;
+        }
+    }
+    return unique === 0;
+}
+
+function typeAcquisitionChanged(opt1: TypeAcquisition, opt2: TypeAcquisition): boolean {
+    return opt1.enable !== opt2.enable ||
+        !setIsEqualTo(opt1.include, opt2.include) ||
+        !setIsEqualTo(opt1.exclude, opt2.exclude);
+}
+
+function compilerOptionsChanged(opt1: CompilerOptions, opt2: CompilerOptions): boolean {
+    // TODO: add more relevant properties
+    return getAllowJSCompilerOption(opt1) !== getAllowJSCompilerOption(opt2);
+}
+
+function unresolvedImportsChanged(imports1: SortedReadonlyArray<string> | undefined, imports2: SortedReadonlyArray<string> | undefined): boolean {
+    if (imports1 === imports2) {
+        return false;
+    }
+    return !arrayIsEqualTo(imports1, imports2);
+}
 
 export abstract class Project implements LanguageServiceHost, ModuleResolutionHost {
     private rootFiles: ScriptInfo[] = [];
@@ -338,6 +394,8 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
 
     /** @internal */
     lastCachedUnresolvedImportsList: SortedReadonlyArray<string> | undefined;
+    /** @internal */
+    private typingsCacheEntry: TypingsCacheEntry | undefined;
     /** @internal */
     private hasAddedorRemovedFiles = false;
     /** @internal */
@@ -1061,7 +1119,8 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
     }
 
     close() {
-        this.projectService.typingsCache.onProjectClosed(this);
+        this.typingsCacheEntry = undefined;
+        this.projectService.typingsInstaller.onProjectClosed(this);
         this.closeWatchingTypingLocations();
         // if we have a program - release all files that are enlisted in program but arent root
         // The releasing of the roots happens later
@@ -1367,7 +1426,7 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
                 this.lastCachedUnresolvedImportsList = getUnresolvedImports(this.program!, this.cachedUnresolvedImportsPerFile);
             }
 
-            this.projectService.typingsCache.enqueueInstallTypingsForProject(this, hasAddedorRemovedFiles);
+            this.enqueueInstallTypingsForProject(hasAddedorRemovedFiles);
         }
         else {
             this.lastCachedUnresolvedImportsList = undefined;
@@ -1388,6 +1447,56 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         perfLogger?.logStopUpdateGraph();
         tracing?.pop();
         return !hasNewProgram;
+    }
+
+    /** @internal */
+    enqueueInstallTypingsForProject(forceRefresh: boolean) {
+        if (this.projectService.typingsInstaller === nullTypingsInstaller) return;
+        const typeAcquisition = this.getTypeAcquisition();
+        if (!typeAcquisition?.enable) return;
+
+        const entry = this.typingsCacheEntry;
+        if (
+            forceRefresh ||
+            !entry ||
+            typeAcquisitionChanged(typeAcquisition, entry.typeAcquisition) ||
+            compilerOptionsChanged(this.getCompilationSettings(), entry.compilerOptions) ||
+            unresolvedImportsChanged(this.lastCachedUnresolvedImportsList, entry.unresolvedImports)
+        ) {
+            // Note: entry is now poisoned since it does not really contain typings for a given combination of compiler options\typings options.
+            // instead it acts as a placeholder to prevent issuing multiple requests
+            this.typingsCacheEntry = {
+                compilerOptions: this.getCompilationSettings(),
+                typeAcquisition,
+                typings: entry ? entry.typings : emptyArray,
+                unresolvedImports: this.lastCachedUnresolvedImportsList,
+                poisoned: true,
+            };
+            // something has been changed, issue a request to update typings
+            this.projectService.typingsInstaller.enqueueInstallTypingsRequest(
+                this,
+                typeAcquisition,
+                this.lastCachedUnresolvedImportsList,
+            );
+        }
+    }
+
+    /** @internal */
+    updateTypingsForProject(
+        compilerOptions: CompilerOptions,
+        typeAcquisition: TypeAcquisition,
+        unresolvedImports: SortedReadonlyArray<string>,
+        newTypings: string[],
+    ) {
+        const typings = sort(newTypings);
+        this.typingsCacheEntry = {
+            compilerOptions,
+            typeAcquisition,
+            typings,
+            unresolvedImports,
+            poisoned: false,
+        };
+        return this.updateTypingFiles(typings, /*scheduleUpdate*/ true);
     }
 
     /** @internal */
@@ -1880,7 +1989,10 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         // If the typeAcquition is disabled, dont use typing files as root and close existing watchers from TI
         if (!this.getTypeAcquisition().enable) {
             this.updateTypingFiles(/*typingFiles*/ undefined, /*scheduleUpdate*/ false);
-            this.projectService.typingsCache.onDisableTypeAcquisition(this);
+            if (this.typingsCacheEntry) {
+                this.typingsCacheEntry = undefined;
+                this.projectService.typingsInstaller.onTypeAcquisitionDisabled?.(this);
+            }
         }
     }
 
