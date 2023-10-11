@@ -83,6 +83,7 @@ import {
     noop,
     normalizePath,
     normalizeSlashes,
+    notImplemented,
     optionDeclarations,
     optionsForWatch,
     PackageJsonAutoImportPreference,
@@ -104,6 +105,7 @@ import {
     removeMinAndVersionNumbers,
     ResolvedProjectReference,
     resolveProjectReferencePath,
+    returnFalse,
     returnNoopFileWatcher,
     returnTrue,
     ScriptKind,
@@ -168,7 +170,6 @@ import {
     Msg,
     NormalizedPath,
     normalizedPathToPath,
-    nullTypingsInstaller,
     PackageInstalledResponse,
     PackageJsonCache,
     Project,
@@ -201,6 +202,16 @@ export const CreateFileWatcherEvent: protocol.CreateFileWatcherEventName = "crea
 export const CreateDirectoryWatcherEvent: protocol.CreateDirectoryWatcherEventName = "createDirectoryWatcher";
 export const CloseFileWatcherEvent: protocol.CloseFileWatcherEventName = "closeFileWatcher";
 const ensureProjectForOpenFileSchedule = "*ensureProjectForOpenFiles*";
+
+export const nullTypingsInstaller: ITypingsInstaller = {
+    isKnownTypesPackageName: returnFalse,
+    // Should never be called because we never provide a types registry.
+    installPackage: notImplemented,
+    enqueueInstallTypingsRequest: noop,
+    attach: noop,
+    onProjectClosed: noop,
+    globalTypingsCacheLocation: undefined!, // TODO: GH#18217
+};
 
 export interface ProjectsUpdatedInBackgroundEvent {
     eventName: typeof ProjectsUpdatedInBackgroundEvent;
