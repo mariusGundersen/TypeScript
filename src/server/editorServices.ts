@@ -1293,7 +1293,13 @@ export class ProjectService {
             case ActionSet:
                 // Update the typing files and update the project
                 project.updateTypingFiles(
-                    this.typingsCache.updateTypingsForProject(response.projectName, response.compilerOptions, response.typeAcquisition, response.unresolvedImports, response.typings),
+                    this.typingsCache.updateTypingsForProject(
+                        project,
+                        response.compilerOptions,
+                        response.typeAcquisition,
+                        response.unresolvedImports,
+                        response.typings,
+                    ),
                     /*scheduleUpdate*/ true,
                 );
                 return;

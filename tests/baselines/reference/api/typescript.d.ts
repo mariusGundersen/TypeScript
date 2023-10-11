@@ -3340,7 +3340,6 @@ declare namespace ts {
             readonly jsDocParsingMode: JSDocParsingMode | undefined;
             isKnownTypesPackageName(name: string): boolean;
             installPackage(options: InstallPackageOptions): Promise<ApplyCodeActionCommandResult>;
-            private get typingsCache();
             getCompilationSettings(): ts.CompilerOptions;
             getCompilerOptions(): ts.CompilerOptions;
             getNewLine(): string;

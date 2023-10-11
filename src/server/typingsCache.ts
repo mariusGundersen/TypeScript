@@ -103,27 +103,19 @@ function unresolvedImportsChanged(imports1: SortedReadonlyArray<string> | undefi
 
 /** @internal */
 export class TypingsCache {
-    private readonly perProjectCache = new Map<string, TypingsCacheEntry>();
+    private readonly perProjectCache = new Map<Project, TypingsCacheEntry>();
 
     constructor(private readonly installer: ITypingsInstaller) {
-    }
-
-    isKnownTypesPackageName(name: string): boolean {
-        return this.installer.isKnownTypesPackageName(name);
-    }
-
-    installPackage(options: InstallPackageOptionsWithProject): Promise<ApplyCodeActionCommandResult> {
-        return this.installer.installPackage(options);
     }
 
     enqueueInstallTypingsForProject(project: Project, forceRefresh: boolean) {
         const typeAcquisition = project.getTypeAcquisition();
 
-        if (!typeAcquisition || !typeAcquisition.enable) {
+        if (!typeAcquisition || !typeAcquisition.enable || this.installer === nullTypingsInstaller) {
             return;
         }
 
-        const entry = this.perProjectCache.get(project.getProjectName());
+        const entry = this.perProjectCache.get(project);
         if (
             forceRefresh ||
             !entry ||
@@ -133,7 +125,7 @@ export class TypingsCache {
         ) {
             // Note: entry is now poisoned since it does not really contain typings for a given combination of compiler options\typings options.
             // instead it acts as a placeholder to prevent issuing multiple requests
-            this.perProjectCache.set(project.getProjectName(), {
+            this.perProjectCache.set(project, {
                 compilerOptions: project.getCompilationSettings(),
                 typeAcquisition,
                 typings: entry ? entry.typings : emptyArray,
@@ -145,9 +137,9 @@ export class TypingsCache {
         }
     }
 
-    updateTypingsForProject(projectName: string, compilerOptions: CompilerOptions, typeAcquisition: TypeAcquisition, unresolvedImports: SortedReadonlyArray<string>, newTypings: string[]) {
+    updateTypingsForProject(project: Project, compilerOptions: CompilerOptions, typeAcquisition: TypeAcquisition, unresolvedImports: SortedReadonlyArray<string>, newTypings: string[]) {
         const typings = sort(newTypings);
-        this.perProjectCache.set(projectName, {
+        this.perProjectCache.set(project, {
             compilerOptions,
             typeAcquisition,
             typings,
@@ -158,12 +150,12 @@ export class TypingsCache {
     }
 
     onProjectClosed(project: Project) {
-        this.perProjectCache.delete(project.getProjectName());
+        this.perProjectCache.delete(project);
         this.installer.onProjectClosed(project);
     }
 
     onDisableTypeAcquisition(project: Project) {
-        if (this.perProjectCache.delete(project.getProjectName())) {
+        if (this.perProjectCache.delete(project)) {
             this.installer.onTypeAcquisitionDisabled?.(project);
         }
     }

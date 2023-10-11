@@ -357,7 +357,14 @@ export interface TestProjectServiceOptions extends ts.server.ProjectServiceOptio
 
 export class TestProjectService extends ts.server.ProjectService {
     public testhost: TestSessionAndServiceHost;
-    constructor(host: TestServerHost, public override logger: Logger, cancellationToken: ts.HostCancellationToken, useSingleInferredProject: boolean, typingsInstaller: ts.server.ITypingsInstaller, opts: Partial<TestProjectServiceOptions> = {}) {
+    constructor(
+        host: TestServerHost,
+        public override logger: Logger,
+        cancellationToken: ts.HostCancellationToken,
+        useSingleInferredProject: boolean,
+        typingsInstaller: ts.server.ITypingsInstaller | undefined,
+        opts: Partial<TestProjectServiceOptions> = {},
+    ) {
         super({
             host,
             logger,
@@ -383,7 +390,14 @@ export function createProjectService(host: TestServerHost, options?: Partial<Tes
     const cancellationToken = options?.cancellationToken || ts.server.nullCancellationToken;
     const logger = options?.logger || createHasErrorMessageLogger();
     const useSingleInferredProject = options?.useSingleInferredProject !== undefined ? options.useSingleInferredProject : false;
-    return new TestProjectService(host, logger, cancellationToken, useSingleInferredProject, options?.typingsInstaller || ts.server.nullTypingsInstaller, options);
+    return new TestProjectService(
+        host,
+        logger,
+        cancellationToken,
+        useSingleInferredProject,
+        options?.typingsInstaller,
+        options,
+    );
 }
 
 export function protocolLocationFromSubstring(str: string, substring: string, options?: SpanFromSubstringOptions): ts.server.protocol.Location {
