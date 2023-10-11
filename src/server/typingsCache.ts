@@ -153,7 +153,7 @@ export class TypingsCache {
             unresolvedImports,
             poisoned: false,
         });
-        return !typeAcquisition || !typeAcquisition.enable ? emptyArray : typings;
+        return typings;
     }
 
     onProjectClosed(project: Project) {
