@@ -323,14 +323,6 @@ Info seq  [hh:mm:ss:mss] 	Files (3)
 	/tmp/node_modules/node/index.d.ts Text-1 "\ndeclare module \"net\" {\n    export type n = number;\n}\ndeclare module \"stream\" {\n    export type s = string;\n}"
 	/a/b/app.js SVC-1-1 "// @ts-check\n\nconst net = require(\"net\");\nconst stream = require(\"s tream\");"
 
-
-	../lib/lib.d.ts
-	  Default library for target 'es5'
-	../../tmp/node_modules/node/index.d.ts
-	  Imported via "net" from file 'app.js'
-	app.js
-	  Root file specified for compilation
-
 Info seq  [hh:mm:ss:mss] -----------------------------------------------
 TI:: [hh:mm:ss:mss] Got install request
     {
