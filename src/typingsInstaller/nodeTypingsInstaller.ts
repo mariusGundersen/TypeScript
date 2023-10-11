@@ -172,6 +172,9 @@ export class NodeTypingsInstaller extends TypingsInstaller {
             case "closeProject":
                 this.closeProject(req);
                 break;
+            case "disableTypeAcquisition":
+                this.disableTypeAcquisition(req);
+                break;
             case "typesRegistry": {
                 const typesRegistry: { [key: string]: MapLike<string>; } = {};
                 this.typesRegistry.forEach((value, key) => {

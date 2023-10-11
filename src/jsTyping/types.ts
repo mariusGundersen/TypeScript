@@ -26,7 +26,7 @@ export interface TypingInstallerRequestWithProjectName {
 }
 
 /** @internal */
-export type TypingInstallerRequestUnion = DiscoverTypings | CloseProject | TypesRegistryRequest | InstallPackageRequest;
+export type TypingInstallerRequestUnion = DiscoverTypings | CloseProject | TypesRegistryRequest | InstallPackageRequest | DisableTypeAcquisition;
 
 export interface DiscoverTypings extends TypingInstallerRequestWithProjectName {
     readonly fileNames: string[];
@@ -40,6 +40,10 @@ export interface DiscoverTypings extends TypingInstallerRequestWithProjectName {
 
 export interface CloseProject extends TypingInstallerRequestWithProjectName {
     readonly kind: "closeProject";
+}
+
+export interface DisableTypeAcquisition extends TypingInstallerRequestWithProjectName {
+    readonly kind: "disableTypeAcquisition";
 }
 
 export interface TypesRegistryRequest {

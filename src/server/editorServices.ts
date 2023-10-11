@@ -1299,7 +1299,7 @@ export class ProjectService {
                 return;
             case ActionInvalidate:
                 // Do not clear resolution cache, there was changes detected in typings, so enque typing request and let it get us correct results
-                this.typingsCache.enqueueInstallTypingsForProject(project, project.lastCachedUnresolvedImportsList, /*forceRefresh*/ true);
+                this.typingsCache.enqueueInstallTypingsForProject(project, /*forceRefresh*/ true);
                 return;
         }
     }

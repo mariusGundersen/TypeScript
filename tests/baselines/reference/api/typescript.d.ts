@@ -41,6 +41,9 @@ declare namespace ts {
         interface CloseProject extends TypingInstallerRequestWithProjectName {
             readonly kind: "closeProject";
         }
+        interface DisableTypeAcquisition extends TypingInstallerRequestWithProjectName {
+            readonly kind: "disableTypeAcquisition";
+        }
         interface TypesRegistryRequest {
             readonly kind: "typesRegistry";
         }
@@ -3106,6 +3109,7 @@ declare namespace ts {
                 abstract readonly typesRegistry: Map<string, MapLike<string>>;
                 constructor(installTypingHost: InstallTypingHost, globalCachePath: string, safeListPath: Path, typesMapLocation: Path, throttleLimit: number, log?: Log);
                 closeProject(req: CloseProject): void;
+                disableTypeAcquisition(req: DisableTypeAcquisition): void;
                 private closeWatchers;
                 install(req: DiscoverTypings): void;
                 private initializeSafeList;
@@ -3252,6 +3256,7 @@ declare namespace ts {
             enqueueInstallTypingsRequest(p: Project, typeAcquisition: TypeAcquisition, unresolvedImports: SortedReadonlyArray<string> | undefined): void;
             attach(projectService: ProjectService): void;
             onProjectClosed(p: Project): void;
+            onTypeAcquisitionDisabled?(p: Project): void;
             readonly globalTypingsCacheLocation: string | undefined;
         }
         const nullTypingsInstaller: ITypingsInstaller;

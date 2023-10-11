@@ -289,6 +289,18 @@ Info seq  [hh:mm:ss:mss] Config: /users/user/projects/project1/jsconfig.json : {
   "configFilePath": "/users/user/projects/project1/jsconfig.json"
  }
 }
+TI:: [hh:mm:ss:mss] Closing file watchers for project '/users/user/projects/project1/jsconfig.json'
+TI:: [hh:mm:ss:mss] Sending response:
+    {
+      "kind": "action::watchTypingLocations",
+      "projectName": "/users/user/projects/project1/jsconfig.json",
+      "files": []
+    }
+Info seq  [hh:mm:ss:mss] DirectoryWatcher:: Close:: WatchInfo: /users/user/projects/project1/bower_components 1 undefined Project: /users/user/projects/project1/jsconfig.json WatchType: Directory location for typing installer
+Info seq  [hh:mm:ss:mss] Elapsed:: *ms DirectoryWatcher:: Close:: WatchInfo: /users/user/projects/project1/bower_components 1 undefined Project: /users/user/projects/project1/jsconfig.json WatchType: Directory location for typing installer
+Info seq  [hh:mm:ss:mss] DirectoryWatcher:: Close:: WatchInfo: /users/user/projects/project1/node_modules 1 undefined Project: /users/user/projects/project1/jsconfig.json WatchType: Directory location for typing installer
+Info seq  [hh:mm:ss:mss] Elapsed:: *ms DirectoryWatcher:: Close:: WatchInfo: /users/user/projects/project1/node_modules 1 undefined Project: /users/user/projects/project1/jsconfig.json WatchType: Directory location for typing installer
+TI:: [hh:mm:ss:mss] Closing file watchers for project '/users/user/projects/project1/jsconfig.json' - done.
 Info seq  [hh:mm:ss:mss] Starting updateGraphWorker: Project: /users/user/projects/project1/jsconfig.json
 Info seq  [hh:mm:ss:mss] Finishing updateGraphWorker: Project: /users/user/projects/project1/jsconfig.json Version: 2 structureChanged: false structureIsReused:: Completely Elapsed:: *ms
 Info seq  [hh:mm:ss:mss] Project '/users/user/projects/project1/jsconfig.json' (Configured)
@@ -315,6 +327,30 @@ Info seq  [hh:mm:ss:mss] Open files:
 Info seq  [hh:mm:ss:mss] 	FileName: /users/user/projects/project1/app.js ProjectRootPath: undefined
 Info seq  [hh:mm:ss:mss] 		Projects: /users/user/projects/project1/jsconfig.json
 After running Timeout callback:: count: 0
+
+PolledWatches::
+/a/lib/lib.d.ts:
+  {"pollingInterval":500}
+/users/user/projects/node_modules:
+  {"pollingInterval":500}
+/users/user/projects/node_modules/@types:
+  {"pollingInterval":500}
+/users/user/projects/project1/node_modules/@types:
+  {"pollingInterval":500}
+
+PolledWatches *deleted*::
+/users/user/projects/project1/bower_components:
+  {"pollingInterval":500}
+
+FsWatches::
+/users/user/projects/project1/jsconfig.json:
+  {}
+
+FsWatchesRecursive::
+/users/user/projects/project1:
+  {}
+/users/user/projects/project1/node_modules:
+  {}
 
 TI:: [hh:mm:ss:mss] #1 with arguments'["@types/bar@tsFakeMajor.Minor"]':: true
 TI:: Before installWorker

@@ -640,6 +640,10 @@ function startNodeSession(options: StartSessionOptions, logger: Logger, cancella
             this.send({ projectName: p.getProjectName(), kind: "closeProject" });
         }
 
+        onTypeAcquisitionDisabled(p: ts.server.Project): void {
+            this.send({ projectName: p.getProjectName(), kind: "disableTypeAcquisition" });
+        }
+
         private send<T extends TypingInstallerRequestUnion>(rq: T): void {
             this.installer.send(rq);
         }

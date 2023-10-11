@@ -31,6 +31,7 @@ export interface ITypingsInstaller {
     enqueueInstallTypingsRequest(p: Project, typeAcquisition: TypeAcquisition, unresolvedImports: SortedReadonlyArray<string> | undefined): void;
     attach(projectService: ProjectService): void;
     onProjectClosed(p: Project): void;
+    onTypeAcquisitionDisabled?(p: Project): void;
     readonly globalTypingsCacheLocation: string | undefined;
 }
 
@@ -115,7 +116,7 @@ export class TypingsCache {
         return this.installer.installPackage(options);
     }
 
-    enqueueInstallTypingsForProject(project: Project, unresolvedImports: SortedReadonlyArray<string> | undefined, forceRefresh: boolean) {
+    enqueueInstallTypingsForProject(project: Project, forceRefresh: boolean) {
         const typeAcquisition = project.getTypeAcquisition();
 
         if (!typeAcquisition || !typeAcquisition.enable) {
@@ -128,7 +129,7 @@ export class TypingsCache {
             !entry ||
             typeAcquisitionChanged(typeAcquisition, entry.typeAcquisition) ||
             compilerOptionsChanged(project.getCompilationSettings(), entry.compilerOptions) ||
-            unresolvedImportsChanged(unresolvedImports, entry.unresolvedImports)
+            unresolvedImportsChanged(project.lastCachedUnresolvedImportsList, entry.unresolvedImports)
         ) {
             // Note: entry is now poisoned since it does not really contain typings for a given combination of compiler options\typings options.
             // instead it acts as a placeholder to prevent issuing multiple requests
@@ -136,11 +137,11 @@ export class TypingsCache {
                 compilerOptions: project.getCompilationSettings(),
                 typeAcquisition,
                 typings: entry ? entry.typings : emptyArray,
-                unresolvedImports,
+                unresolvedImports: project.lastCachedUnresolvedImportsList,
                 poisoned: true,
             });
             // something has been changed, issue a request to update typings
-            this.installer.enqueueInstallTypingsRequest(project, typeAcquisition, unresolvedImports);
+            this.installer.enqueueInstallTypingsRequest(project, typeAcquisition, project.lastCachedUnresolvedImportsList);
         }
     }
 
@@ -159,5 +160,11 @@ export class TypingsCache {
     onProjectClosed(project: Project) {
         this.perProjectCache.delete(project.getProjectName());
         this.installer.onProjectClosed(project);
+    }
+
+    onDisableTypeAcquisition(project: Project) {
+        if (this.perProjectCache.delete(project.getProjectName())) {
+            this.installer.onTypeAcquisitionDisabled?.(project);
+        }
     }
 }
