@@ -319,10 +319,7 @@ const enabledTypeAcquisition: TypeAcquisition = {
 interface TypingsCacheEntry {
     readonly typeAcquisition: TypeAcquisition;
     readonly compilerOptions: CompilerOptions;
-    readonly typings: SortedReadonlyArray<string>;
     readonly unresolvedImports: SortedReadonlyArray<string> | undefined;
-    /* mainly useful for debugging */
-    poisoned: boolean;
 }
 
 function setIsEqualTo(arr1: string[] | undefined, arr2: string[] | undefined): boolean {
@@ -354,13 +351,13 @@ function setIsEqualTo(arr1: string[] | undefined, arr2: string[] | undefined): b
     return unique === 0;
 }
 
-function typeAcquisitionChanged(opt1: TypeAcquisition, opt2: TypeAcquisition): boolean {
+function typeAcquisitionChangeRequiresRefresh(opt1: TypeAcquisition, opt2: TypeAcquisition): boolean {
     return opt1.enable !== opt2.enable ||
         !setIsEqualTo(opt1.include, opt2.include) ||
         !setIsEqualTo(opt1.exclude, opt2.exclude);
 }
 
-function compilerOptionsChanged(opt1: CompilerOptions, opt2: CompilerOptions): boolean {
+function compilerOptionsChangeRequiresRefresh(opt1: CompilerOptions, opt2: CompilerOptions): boolean {
     // TODO: add more relevant properties
     return getAllowJSCompilerOption(opt1) !== getAllowJSCompilerOption(opt2);
 }
@@ -1468,8 +1465,8 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         if (
             forceRefresh ||
             !entry ||
-            typeAcquisitionChanged(typeAcquisition, entry.typeAcquisition) ||
-            compilerOptionsChanged(this.getCompilationSettings(), entry.compilerOptions) ||
+            typeAcquisitionChangeRequiresRefresh(typeAcquisition, entry.typeAcquisition) ||
+            compilerOptionsChangeRequiresRefresh(this.getCompilationSettings(), entry.compilerOptions) ||
             unresolvedImportsChanged(this.lastCachedUnresolvedImportsList, entry.unresolvedImports)
         ) {
             // Note: entry is now poisoned since it does not really contain typings for a given combination of compiler options\typings options.
@@ -1477,9 +1474,7 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
             this.typingsCacheEntry = {
                 compilerOptions: this.getCompilationSettings(),
                 typeAcquisition,
-                typings: entry ? entry.typings : emptyArray,
                 unresolvedImports: this.lastCachedUnresolvedImportsList,
-                poisoned: true,
             };
             // something has been changed, issue a request to update typings
             this.projectService.typingsInstaller.enqueueInstallTypingsRequest(
@@ -1497,15 +1492,12 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         unresolvedImports: SortedReadonlyArray<string>,
         newTypings: string[],
     ) {
-        const typings = sort(newTypings);
         this.typingsCacheEntry = {
             compilerOptions,
             typeAcquisition,
-            typings,
             unresolvedImports,
-            poisoned: false,
         };
-        return this.updateTypingFiles(typings, /*scheduleUpdate*/ true);
+        return this.updateTypingFiles(sort(newTypings), /*scheduleUpdate*/ true);
     }
 
     /** @internal */
@@ -1961,21 +1953,19 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
     }
 
     setCompilerOptions(compilerOptions: CompilerOptions) {
-        if (compilerOptions) {
-            compilerOptions.allowNonTsExtensions = true;
-            const oldOptions = this.compilerOptions;
-            this.compilerOptions = compilerOptions;
-            this.setInternalCompilerOptionsForEmittingJsFiles();
-            this.noDtsResolutionProject?.setCompilerOptions(this.getCompilerOptionsForNoDtsResolutionProject());
-            if (changesAffectModuleResolution(oldOptions, compilerOptions)) {
-                // reset cached unresolved imports if changes in compiler options affected module resolution
-                this.cachedUnresolvedImportsPerFile.clear();
-                this.lastCachedUnresolvedImportsList = undefined;
-                this.resolutionCache.onChangesAffectModuleResolution();
-                this.moduleSpecifierCache.clear();
-            }
-            this.markAsDirty();
+        compilerOptions.allowNonTsExtensions = true;
+        const oldOptions = this.compilerOptions;
+        this.compilerOptions = compilerOptions;
+        this.setInternalCompilerOptionsForEmittingJsFiles();
+        this.noDtsResolutionProject?.setCompilerOptions(this.getCompilerOptionsForNoDtsResolutionProject());
+        if (changesAffectModuleResolution(oldOptions, compilerOptions)) {
+            // reset cached unresolved imports if changes in compiler options affected module resolution
+            this.cachedUnresolvedImportsPerFile.clear();
+            this.lastCachedUnresolvedImportsList = undefined;
+            this.resolutionCache.onChangesAffectModuleResolution();
+            this.moduleSpecifierCache.clear();
         }
+        this.markAsDirty();
     }
 
     /** @internal */
@@ -2416,10 +2406,6 @@ export class InferredProject extends Project {
     }
 
     override setCompilerOptions(options?: CompilerOptions) {
-        // Avoid manipulating the given options directly
-        if (!options && !this.getCompilationSettings()) {
-            return;
-        }
         const newOptions = cloneCompilerOptions(options || this.getCompilationSettings());
         if (this._isJsInferredProject && typeof newOptions.maxNodeModuleJsDepth !== "number") {
             newOptions.maxNodeModuleJsDepth = 2;
