@@ -635,7 +635,6 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
         this.resolutionCache = createResolutionCache(
             this,
             this.currentDirectory,
-            /*logChangesWhenResolvingModule*/ true,
         );
         this.languageService = createLanguageService(this, this.documentRegistry, this.projectService.serverMode);
         if (lastFileExceededProgramSize) {
@@ -1403,18 +1402,20 @@ export abstract class Project implements LanguageServiceHost, ModuleResolutionHo
     updateGraph(): boolean {
         tracing?.push(tracing.Phase.Session, "updateGraph", { name: this.projectName, kind: ProjectKind[this.projectKind] });
         perfLogger?.logStartUpdateGraph();
-        const recordChangesToResolution = this.languageServiceEnabled &&
+        const useTypingsFromGlobalCache = this.languageServiceEnabled &&
             this.projectService.serverMode === LanguageServiceMode.Semantic &&
             this.projectService.typingsInstaller !== nullTypingsInstaller &&
             this.getTypeAcquisition().enable;
-        if (recordChangesToResolution && this.cachedUnresolvedImportsPerFile.size) this.resolutionCache.startRecordingFilesWithChangedResolutions();
+        if (!useTypingsFromGlobalCache) this.resolutionCache.invalidateResolutionsWithGlobalCachePass();
+        else this.resolutionCache.invalidateResolutionsWithoutGlobalCachePass();
+        if (useTypingsFromGlobalCache && this.cachedUnresolvedImportsPerFile.size) this.resolutionCache.startRecordingFilesWithChangedResolutions();
 
         const hasNewProgram = this.updateGraphWorker();
         const hasAddedorRemovedFiles = this.hasAddedorRemovedFiles;
         this.hasAddedorRemovedFiles = false;
         this.hasAddedOrRemovedSymlinks = false;
 
-        if (recordChangesToResolution) {
+        if (useTypingsFromGlobalCache) {
             const changedFiles: readonly Path[] = this.resolutionCache.finishRecordingFilesWithChangedResolutions() || emptyArray;
             for (const file of changedFiles) {
                 // delete cached information for changed files
