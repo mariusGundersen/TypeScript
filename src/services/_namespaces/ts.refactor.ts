@@ -8,6 +8,7 @@ export * from "../refactors/helpers";
 export * from "../refactors/inlineVariable";
 export * from "../refactors/moveToNewFile";
 export * from "../refactors/moveToFile";
+export * from "../refactors/destructureObject";
 import * as addOrRemoveBracesToArrowFunction from "./ts.refactor.addOrRemoveBracesToArrowFunction";
 export { addOrRemoveBracesToArrowFunction };
 import * as convertArrowFunctionOrFunctionExpression from "./ts.refactor.convertArrowFunctionOrFunctionExpression";

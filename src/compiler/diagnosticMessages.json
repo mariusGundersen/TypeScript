@@ -7732,6 +7732,18 @@
         "category": "Message",
         "code": 95187
     },
+    "Destructure object.": {
+        "category": "Message",
+        "code": 95188
+    },
+    "Could not find variable to destructure.": {
+        "category": "Message",
+        "code": 95189
+    },
+    "Variables with multiple declarations cannot be destructured.": {
+        "category": "Message",
+        "code": 95190
+    },
 
     "No value exists in scope for the shorthand property '{0}'. Either declare one or provide an initializer.": {
         "category": "Error",
