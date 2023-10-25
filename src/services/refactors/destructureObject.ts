@@ -6,7 +6,9 @@ import {
     FindAllReferences,
     getLocaleSpecificMessage,
     getTouchingPropertyName,
+    getUniqueName,
     Identifier,
+    identifierToKeywordKind,
     InitializedVariableDeclaration,
     isExportModifier,
     isIdentifier,
@@ -90,6 +92,7 @@ registerRefactor(refactorName, {
         Debug.assert(actionName === refactorName, "Unexpected refactor invoked");
 
         const { file, program, startPosition } = context;
+        const checker = program.getTypeChecker();
 
         // tryWithReferenceToken is true below since here we're already performing the refactor.
         // The trigger kind was only relevant when checking the availability of the refactor.
@@ -100,14 +103,29 @@ registerRefactor(refactorName, {
 
         const { references, declaringIdentifier } = info;
         const edits = textChanges.ChangeTracker.with(context, tracker => {
-            const usedNames = new Set<string>();
+            const usedNames = new Map<string, string | undefined>();
             for (const node of references) {
-                tracker.replaceNode(file, node, node.name);
-                usedNames.add(node.name.text);
+                if(usedNames.has(node.name.text)){
+                    const uniqueName = usedNames.get(node.name.text);
+                    tracker.replaceNode(file, node, uniqueName ? factory.createIdentifier(uniqueName) : node.name);
+                } else if (isIdentifier(node.name) && identifierToKeywordKind(node.name) || checker.resolveName(node.name.text, node, SymbolFlags.Value, /*excludeGlobals*/ false)) {
+                    const uniqueName = getUniqueName(node.name.text, file);
+                    usedNames.set(node.name.text, uniqueName);
+                    tracker.replaceNode(file, node, factory.createIdentifier(uniqueName));
+                }else{
+                    usedNames.set(node.name.text, undefined);
+                    tracker.replaceNode(file, node, node.name);
+                }
             }
 
-            const names = [...usedNames.values()].sort();
-            tracker.replaceNode(file, declaringIdentifier, factory.createObjectBindingPattern(names.map(v => factory.createBindingElement(/*dotDotDotToken*/ undefined, /*propertyName*/ undefined, v))));
+            const names = [...usedNames.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+            const destructureObject = factory.createObjectBindingPattern(names
+                .map(([k, v]) => v
+                    ? factory.createBindingElement(/*dotDotDotToken*/ undefined, k, v)
+                    : factory.createBindingElement(/*dotDotDotToken*/ undefined, /*propertyName*/ undefined, k)))
+
+            tracker.replaceNode(file, declaringIdentifier, destructureObject);
         });
 
         return { edits };
